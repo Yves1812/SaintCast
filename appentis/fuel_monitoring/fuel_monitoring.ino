@@ -13,8 +13,8 @@
 #define MAX_TRIES 50
 
 // Pin which we're using
-#define trigPin 7
-#define echoPin 8
+#define trigPin 4
+#define echoPin 5
 #define CLIENT_NAME "Cuve_fioul"
   
 #define mqtt_server "192.168.0.50"
