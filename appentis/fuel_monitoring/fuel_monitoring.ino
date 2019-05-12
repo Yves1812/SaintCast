@@ -1,6 +1,6 @@
 
 /* SmartHome application developped by Yves Bonnefont to monitor fuel level using MQTT protocol
-2018-04 V1.
+  2018-04 V1.
 */
 
 #include <ESP8266WiFi.h>
@@ -8,10 +8,10 @@
 
 #define debug true
 
-//#define wifi_ssid "Penn_Ty_Breizh"
-//#define wifi_password "marie-pascale"
-#define wifi_ssid "Home_Etage"
-#define wifi_password "mariepascale"
+#define wifi_ssid_preferred "Penn_Ty_Breizh"
+#define wifi_password_preferred "marie-pascale"
+#define wifi_ssid_alternative "Home_Etage"
+#define wifi_password_alternative "mariepascale"
 
 
 #define MAX_TRIES 50
@@ -20,15 +20,18 @@
 #define trigPin 4
 #define echoPin 13
 #define CLIENT_NAME "Cuve_fioul"
-  
 #define mqtt_server "192.168.0.60"
+
+// wifi used
+char active_wifi_ssid[] = wifi_ssid_preferred;
+char active_wifi_password[] = wifi_password_preferred;
 
 //Buffer qui permet de décoder les messages MQTT reçus
 char message_buff_payload[100];
 
 // manages periodic sent without using delay
-unsigned long last_sent=0;
-int send_period=30; // in seconds
+unsigned long last_sent = 0;
+int send_period = 3600; // in seconds
 
 // Header of callback function
 void callback(char* topic, byte* payload, unsigned int length);
@@ -38,47 +41,67 @@ WiFiClient espClient;
 PubSubClient MQTTclient(mqtt_server, 1883, callback, espClient);
 
 //Connexion au réseau WiFi
-void setup_wifi() {
-  int tries=0;
-  int status_wifi = WL_IDLE_STATUS;
+int connect_wifi(){
+  int tries = 0;
   delay(10);
   Serial.println();
   Serial.print("Connexion a ");
-  Serial.print(wifi_ssid);
-    
+  Serial.print(active_wifi_ssid);
+
   // attempt to connect to Wifi network:
-  WiFi.begin(wifi_ssid, wifi_password);
-  while (WiFi.status() != WL_CONNECTED  && tries<MAX_TRIES) {
-    delay(500);
-    tries=tries+1;
+  WiFi.begin(active_wifi_ssid, active_wifi_password);
+  while (WiFi.status() != WL_CONNECTED  && tries < MAX_TRIES) {
+    delay(250);
+    tries = tries + 1;
     Serial.print(".");
   }
 
   Serial.println("");
-  if (tries<MAX_TRIES){
+  if (tries < MAX_TRIES) {
     Serial.println("Connexion WiFi etablie ");
     Serial.print("=> Addresse IP : ");
     Serial.println(WiFi.localIP());
+    return 0;
   }
   else
   {
-    Serial.println("Failed to connect to WiFi");
+    Serial.print("Connexion a ");
+    Serial.print(active_wifi_ssid);
+    Serial.println(" a echoue.");
+    return -1;
+  }
+}
+
+void setup_wifi() {
+  if (connect_wifi()!=0){
+    if (strcmp(active_wifi_ssid, wifi_ssid_preferred)==0){
+      strcpy(active_wifi_ssid, wifi_ssid_alternative);
+      strcpy(active_wifi_password, wifi_password_alternative);
+    }
+    else
+    {
+      strcpy(active_wifi_ssid, wifi_ssid_preferred);
+      strcpy(active_wifi_password, wifi_password_preferred);
+    }
+    if (connect_wifi()!=0){
+      Serial.println("Failed to connect to both preferred and alternative WiFi");
+    }
   }
 }
 
 //Connexion - Reconnexion MQTT
-void MQTTreconnect(){
-  int tries=0;
+void MQTTreconnect() {
+  int tries = 0;
   //Boucle jusqu'à obtenir une reconnexion
   Serial.print("Connexion au serveur MQTT...");
-  while (!MQTTclient.connected() && tries<5) {
+  while (!MQTTclient.connected() && tries < 5) {
     Serial.print(".");
     if (!MQTTclient.connect(CLIENT_NAME)) {
-      tries=tries+1;
+      tries = tries + 1;
       delay(1000);
     }
   }
-  if (tries<5){
+  if (tries < 5) {
     Serial.print("Connected as ");
     Serial.println(CLIENT_NAME);
   }
@@ -95,31 +118,31 @@ void callback(char* topic, byte* payload, unsigned int length) {
   int i = 0;
   if ( debug ) {
     Serial.println("Message recu =>  topic: " + String(topic));
-    Serial.print(" | longueur: " + String(length,DEC));
+    Serial.print(" | longueur: " + String(length, DEC));
   }
   // create character buffer with ending null terminator (string)
-  for(i=0; i<length; i++) {
+  for (i = 0; i < length; i++) {
     message_buff_payload[i] = payload[i];
   }
   message_buff_payload[i] = '\0';
-  
+
   String msgString = String(message_buff_payload);
   if ( debug ) {
     Serial.println("Payload: " + msgString);
   }
-// Any actions other than printing the message to stdout to be inserted here  
+  // Any actions other than printing the message to stdout to be inserted here
 }
 
 void sendMQTT(char *topic, float payload)
 {
   char message_buffer[20];
   char* message;
-  
-  message=dtostrf(payload,5,1, message_buffer); //  
+
+  message = dtostrf(payload, 3, 1, message_buffer); //
   Serial.print(topic);
   Serial.print(": ");
-  Serial.println(message);  
-  Serial.println(MQTTclient.publish(topic,message));
+  Serial.println(message);
+  Serial.println(MQTTclient.publish(topic, message));
 }
 
 
@@ -144,7 +167,7 @@ void loop() {
   long duration;
   float distance;
 
-  if (millis()-last_sent > send_period*1000)
+  if (millis() - last_sent > send_period * 1000)
   {
     // reconnect to wifi if needed
     if (WiFi.status() != WL_CONNECTED) {
@@ -156,20 +179,24 @@ void loop() {
     }
 
     //read hauteur fioul
-    digitalWrite(trigPin, LOW);  // Added this line
-    delayMicroseconds(2); // Added this line
-    digitalWrite(trigPin, HIGH);
-    delayMicroseconds(10); // Added this line
-    digitalWrite(trigPin, LOW);
-    duration = pulseIn(echoPin, HIGH);
-    distance = (duration/2) / 29.1;
-    Serial.println(duration); // debug purpose
-    sendMQTT("Niveau_fuel",distance);
-    
-    last_sent=millis();
+    distance=0;
+    for (int i = 0; i <= 3; i++){
+       digitalWrite(trigPin, LOW);  // Added this line
+       delayMicroseconds(2); // Added this line
+       digitalWrite(trigPin, HIGH);
+       delayMicroseconds(10); // Added this line
+       digitalWrite(trigPin, LOW);
+       duration = pulseIn(echoPin, HIGH);
+       distance += (duration / 2) / 29.1;
+       delay(500);
+    }
+    distance=distance/4.0;
+    sendMQTT("Niveau_fuel", distance);
+
+    last_sent = millis();
   }
-  if (last_sent>millis()){ // means millis has been reset => reset last_sent
-    last_sent=millis();
+  if (last_sent > millis()) { // means millis has been reset => reset last_sent
+    last_sent = millis();
   }
   MQTTclient.loop();
 }

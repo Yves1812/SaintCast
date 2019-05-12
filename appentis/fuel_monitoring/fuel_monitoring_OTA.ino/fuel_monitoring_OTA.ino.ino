@@ -171,7 +171,10 @@ void setup() {
 }
 
 void loop() {
-  ArduinoOTA.handle();  float temp;
+  ArduinoOTA.handle();
+  delay(100);
+
+  float temp;
   long duration;
   float distance;
 
