@@ -1,6 +1,7 @@
 
 /* SmartHome application developped by Yves Bonnefont to monitor fuel level using MQTT protocol
-  2018-04 V1.
+  2018-04 V1
+  2019-05 added alternative wifi
 */
 
 #include <ESP8266WiFi.h>
@@ -20,7 +21,7 @@
 #define trigPin 4
 #define echoPin 13
 #define CLIENT_NAME "Cuve_fioul"
-#define mqtt_server "192.168.0.60"
+#define mqtt_server "192.168.0.50"
 
 // wifi used
 char active_wifi_ssid[] = wifi_ssid_preferred;
@@ -31,7 +32,7 @@ char message_buff_payload[100];
 
 // manages periodic sent without using delay
 unsigned long last_sent = 0;
-int send_period = 3600; // in seconds
+int send_period = 60; // in seconds
 
 // Header of callback function
 void callback(char* topic, byte* payload, unsigned int length);
