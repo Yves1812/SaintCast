@@ -61,25 +61,25 @@ class MQTT_client:
     print("message received " ,topic_str, " :",payload_str, " @", datetime.datetime.now())
 #    print("message qos=",message.qos)
 #    print("message retain flag=",message.retain)
-    if message.topic=="Appentis/Orders/Circuit_eau" :
-      if payload_str=="1.0":
-        GPIO.output(CIRCUIT_EAU, True)
-        print("Circulation d'eau allumée")
-      else :
-        GPIO.output(CIRCUIT_EAU, False)
-        print("Circulation d'eau éteinte")
-    elif message.topic=="Appentis/Orders/VMC_appentis" :
-      if payload_str=="1.0":
-        GPIO.output(VMC_APPENTIS, True)
-        print("VMC allumée")
-      else :
-        GPIO.output(VMC_APPENTIS, False)
-        print("VMC éteinte")
-    elif message.topic=="Appentis/Orders/Send_period" :
-      period=int(payload_str)
-      print("Publishing period set to:", str(period))
-    else :
-      print("Not a known order message")
+    # if message.topic=="Appentis/Orders/Circuit_eau" :
+      # if payload_str=="1.0":
+        # GPIO.output(CIRCUIT_EAU, True)
+        # print("Circulation d'eau allumée")
+      # else :
+        # GPIO.output(CIRCUIT_EAU, False)
+        # print("Circulation d'eau éteinte")
+    # elif message.topic=="Appentis/Orders/VMC_appentis" :
+      # if payload_str=="1.0":
+        # GPIO.output(VMC_APPENTIS, True)
+        # print("VMC allumée")
+      # else :
+        # GPIO.output(VMC_APPENTIS, False)
+        # print("VMC éteinte")
+    # elif message.topic=="Appentis/Orders/Send_period" :
+      # period=int(payload_str)
+      # print("Publishing period set to:", str(period))
+    # else :
+      # print("Not a known order message")
 
   def on_log(self, client, userdata, level, buf):
     if LOG == "ON" :
@@ -121,12 +121,10 @@ def PostOneWireData(sensor_id, MQTT_topic):
 LOG="OFF"
 
 #MQTT
-broker_address="192.168.0.50"
+broker_address="192.168.0.60"
 
 # GPIO Pins
 GPIO.setmode(GPIO.BCM)
-CIRCUIT_EAU=27
-VMC_APPENTIS=22
 
 #Sensors id
 temp_eau="0416c21f66ff"
@@ -134,14 +132,12 @@ temp_ext="0516c026feff"
  
 # Topics
 default_subscribed_topics=[]
-default_subscribed_topics.append("Appentis/Orders/#")
-publish_topic="Appentis/Datas/"
+default_subscribed_topics.append("Local_piscine/Orders/#")
+publish_topic="Local_piscine/Datas/"
 period=300
 
 # Opening client and Pi Portd
 client=MQTT_client(broker_address,default_subscribed_topics)
-GPIO.setup(CIRCUIT_EAU, GPIO.OUT)
-GPIO.setup(VMC_APPENTIS, GPIO.OUT)
 
 #Starting
 current_time=datetime.datetime.now()
@@ -156,7 +152,7 @@ try:
           client.publish(publish_topic+"Keep_alive", current_time.strftime("%d/%m/%y %H:%M:%S"))
           print("Published keep alive", current_time)
           PostOneWireData(temp_ext, publish_topic+"Ext/")
-          PostOneWireData(temp_eau, publish_topic+"Retour_chaudiere/")
+          PostOneWireData(temp_int, publish_topic+"Int/")
         time.sleep(5)
         client.loop()
         i=i+1

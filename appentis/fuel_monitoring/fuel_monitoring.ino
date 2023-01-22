@@ -2,6 +2,7 @@
 /* SmartHome application developped by Yves Bonnefont to monitor fuel level using MQTT protocol
   2018-04 V1
   2019-05 added alternative wifi
+  2019-07 adjusted topic and reporting frequnecy
 */
 
 #include <ESP8266WiFi.h>
@@ -32,7 +33,7 @@ char message_buff_payload[100];
 
 // manages periodic sent without using delay
 unsigned long last_sent = 0;
-int send_period = 60; // in seconds
+int send_period = 300; // in seconds
 
 // Header of callback function
 void callback(char* topic, byte* payload, unsigned int length);
@@ -192,7 +193,7 @@ void loop() {
        delay(500);
     }
     distance=distance/4.0;
-    sendMQTT("Niveau_fuel", distance);
+    sendMQTT("Appentis/Datas/Hauteur_fuel", distance);
 
     last_sent = millis();
   }
